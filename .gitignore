@@ -1,0 +1,15 @@
+# Переменные окружения
+.env
+.env.local
+
+# Go
+/vendor/
+bin/
+
+# IDE
+.vscode/
+.idea/
+
+# Загрузки
+/uploads/*
+!/uploads/.gitkeep
