@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music App - Распределитель</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Шапка -->
+        <header class="header">
+            <h1>🎵 Music App</h1>
+            <div id="userInfo" class="user-info" style="display: none;">
+                <span id="username"></span>
+                <button id="logoutBtn" class="btn btn-secondary">Выйти</button>
+            </div>
+        </header>
+
+        <!-- Форма входа -->
+        <div id="loginForm" class="auth-form">
+            <h2>Вход</h2>
+            <form id="loginFormEl">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Пароль</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Войти</button>
+            </form>
+            <p class="switch-form">Нет аккаунта? <a href="#" id="showRegister">Зарегистрироваться</a></p>
+        </div>
+
+        <!-- Форма регистрации -->
+        <div id="registerForm" class="auth-form" style="display: none;">
+            <h2>Регистрация</h2>
+            <form id="registerFormEl">
+                <div class="form-group">
+                    <label for="regEmail">Email</label>
+                    <input type="email" id="regEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="regUsername">Имя пользователя</label>
+                    <input type="text" id="regUsername" required minlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Пароль</label>
+                    <input type="password" id="regPassword" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+            </form>
+            <p class="switch-form">Есть аккаунт? <a href="#" id="showLogin">Войти</a></p>
+        </div>
+
+        <!-- Панель управления (после входа) -->
+        <div id="dashboard" class="dashboard" style="display: none;">
+            <!-- Загрузка трека -->
+            <div class="upload-section">
+                <h2>Загрузить трек</h2>
+                <form id="uploadForm">
+                    <div class="form-group">
+                        <input type="file" id="trackFile" accept="audio/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Загрузить</button>
+                </form>
+                <div id="uploadStatus" class="status"></div>
+            </div>
+
+            <!-- Список треков -->
+            <div class="tracks-section">
+                <h2>Мои треки</h2>
+                <div id="tracksList" class="tracks-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔊 АУДИОПЛЕЕР (фиксированный внизу) 🔊 -->
+    <div id="audioPlayer" class="audio-player" style="display: none;">
+        <div class="player-container">
+            <!-- Информация о треке -->
+            <div class="player-info">
+                <span id="playerTitle" class="player-title">Название трека</span>
+                <span id="playerTime" class="player-time">0:00 / 0:00</span>
+            </div>
+
+            <!-- Элементы управления -->
+            <div class="player-controls">
+                <button id="prevBtn" class="control-btn" title="Предыдущий">⏮</button>
+                <button id="playBtn" class="control-btn play-pause" title="Воспроизвести/Пауза">▶</button>
+                <button id="nextBtn" class="control-btn" title="Следующий">⏭</button>
+            </div>
+
+            <!-- Прогресс бар -->
+            <div class="player-progress">
+                <input type="range" id="progressBar" class="progress-bar" min="0" max="100" value="0">
+            </div>
+
+            <!-- Скорость воспроизведения -->
+            <div class="player-speed">
+                <label for="speedSelect">Скорость:</label>
+                <select id="speedSelect" class="speed-select">
+                    <option value="0.5">0.5x</option>
+                    <option value="0.75">0.75x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2x</option>
+                </select>
+            </div>
+
+            <!-- Скрытый audio элемент -->
+            <audio id="audioElement" preload="metadata"></audio>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>

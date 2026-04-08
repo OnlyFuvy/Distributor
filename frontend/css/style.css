@@ -1,0 +1,443 @@
+/* ===== Базовые стили ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    min-height: 100vh;
+    color: #fff;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* ===== Шапка ===== */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 40px;
+}
+
+.header h1 {
+    font-size: 2rem;
+    background: linear-gradient(90deg, #00d9ff, #00ff88);
+    background-clip: text;              /* ← Добавьте эту строку */
+    -webkit-background-clip: text;      /* ← Эта уже есть */
+    -webkit-text-fill-color: transparent;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#username {
+    font-weight: 600;
+    color: #00d9ff;
+}
+
+/* ===== Формы авторизации ===== */
+.auth-form {
+    max-width: 400px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 40px;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.auth-form h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #00d9ff;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #ccc;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #00d9ff;
+}
+
+.form-group input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* ===== Кнопки ===== */
+.btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    width: 100%;
+    background: linear-gradient(90deg, #00d9ff, #00ff88);
+    color: #1a1a2e;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0, 217, 255, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.switch-form {
+    text-align: center;
+    margin-top: 20px;
+    color: #ccc;
+}
+
+.switch-form a {
+    color: #00d9ff;
+    text-decoration: none;
+}
+
+.switch-form a:hover {
+    text-decoration: underline;
+}
+
+/* ===== Панель управления ===== */
+.dashboard {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 30px;
+}
+
+.upload-section,
+.tracks-section {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 30px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upload-section h2,
+.tracks-section h2 {
+    margin-bottom: 20px;
+    color: #00d9ff;
+}
+
+#uploadForm {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#trackFile {
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    color: #fff;
+}
+
+.status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.status.success {
+    background: rgba(0, 255, 136, 0.2);
+    color: #00ff88;
+}
+
+.status.error {
+    background: rgba(255, 0, 85, 0.2);
+    color: #ff0055;
+}
+
+/* ===== Список треков ===== */
+.tracks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.track-item {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s;
+}
+
+.track-item:hover {
+    border-color: #00d9ff;
+    transform: translateX(5px);
+}
+
+.track-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.track-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.track-meta {
+    color: #ccc;
+    font-size: 0.9rem;
+}
+
+/* ===== Визуализация волны ===== */
+.waveform-container {
+    width: 100%;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.waveform-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+/* ===== Адаптивность ===== */
+@media (max-width: 768px) {
+    .dashboard {
+        grid-template-columns: 1fr;
+    }
+    
+    .header {
+        flex-direction: column;
+        gap: 15px;
+    }
+}
+/* ===== АУДИОПЛЕЕР ===== */
+.audio-player {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 15px 20px;
+    z-index: 1000;
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.player-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 200px 1fr 120px;
+    gap: 20px;
+    align-items: center;
+}
+
+/* Информация о треке */
+.player-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.player-title {
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.player-time {
+    font-size: 0.85rem;
+    color: #ccc;
+}
+
+/* Кнопки управления */
+.player-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+.control-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    transition: all 0.3s;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+.control-btn.play-pause {
+    background: linear-gradient(90deg, #00d9ff, #00ff88);
+    color: #1a1a2e;
+    font-size: 1.8rem;
+    width: 55px;
+    height: 55px;
+}
+
+.control-btn.play-pause:hover {
+    box-shadow: 0 5px 20px rgba(0, 217, 255, 0.4);
+    transform: scale(1.15);
+}
+
+/* Прогресс бар */
+.player-progress {
+    display: flex;
+    align-items: center;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    cursor: pointer;
+    outline: none;
+}
+
+.progress-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(90deg, #00d9ff, #00ff88);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.progress-bar::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+}
+
+.progress-bar::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(90deg, #00d9ff, #00ff88);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+/* Скорость воспроизведения */
+.player-speed {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.player-speed label {
+    color: #ccc;
+    font-size: 0.9rem;
+}
+
+.speed-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: #fff;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+}
+
+.speed-select option {
+    background: #1a1a2e;
+    color: #fff;
+}
+
+/* Адаптивность плеера */
+@media (max-width: 768px) {
+    .player-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .player-info {
+        align-items: center;
+    }
+    
+    .player-speed {
+        justify-content: center;
+    }
+    
+    .audio-player {
+        padding: 10px 15px;
+    }
+}
+
+/* Анимация пульсации при воспроизведении */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.audio-player.playing .player-title {
+    animation: pulse 2s infinite;
+}
