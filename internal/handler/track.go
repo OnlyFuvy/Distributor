@@ -2,12 +2,14 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"music-app/internal/model"
 	"music-app/internal/utils"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/datatypes"
@@ -26,11 +28,31 @@ type UploadTrackResponse struct {
 	Error   string       `json:"error,omitempty"`
 }
 
+// TrackResponse — структура трека для API ответа (с правильным типом waveform_data)
+type TrackResponse struct {
+	ID           uint      `json:"id"`
+	UserID       uint      `json:"user_id"`
+	Title        string    `json:"title"`
+	FilePath     string    `json:"file_path"`
+	FileName     string    `json:"file_name"`
+	FileSize     int64     `json:"file_size"`
+	Duration     float64   `json:"duration"`
+	WaveformData []float64 `json:"waveform_data"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 // GetTracksResponse — ответ сервера со списком треков
 type GetTracksResponse struct {
-	Message string        `json:"message"`
-	Tracks  []model.Track `json:"tracks,omitempty"`
-	Error   string        `json:"error,omitempty"`
+	Message string          `json:"message"`
+	Tracks  []TrackResponse `json:"tracks,omitempty"`
+	Error   string          `json:"error,omitempty"`
+}
+
+// DeleteTrackResponse — ответ сервера при удалении трека
+type DeleteTrackResponse struct {
+	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
 }
 
 // UploadTrack — обработчик загрузки музыкального трека
@@ -146,9 +168,89 @@ func (h *TrackHandler) GetTracks(c *gin.Context) {
 		return
 	}
 
-	// 3. Успешный ответ
+	// 3. ✅ Конвертируем waveform_data для каждого трека
+	//    Создаём новый слайс с правильными данными для API
+	var responseTracks []TrackResponse
+	for _, track := range tracks {
+		// Конвертируем datatypes.JSON в []float64
+		var waveform []float64
+		if track.WaveformData != nil {
+			json.Unmarshal(track.WaveformData, &waveform)
+		}
+
+		responseTracks = append(responseTracks, TrackResponse{
+			ID:           track.ID,
+			UserID:       track.UserID,
+			Title:        track.Title,
+			FilePath:     track.FilePath,
+			FileName:     track.FileName,
+			FileSize:     track.FileSize,
+			Duration:     track.Duration,
+			WaveformData: waveform, // ← Теперь массив, а не JSON
+			CreatedAt:    track.CreatedAt,
+			UpdatedAt:    track.UpdatedAt,
+		})
+	}
+
+	// 4. Успешный ответ
 	c.JSON(http.StatusOK, GetTracksResponse{
 		Message: "Tracks retrieved successfully",
-		Tracks:  tracks,
+		Tracks:  responseTracks,
+	})
+}
+
+// DeleteTrack — обработчик удаления трека
+func (h *TrackHandler) DeleteTrack(c *gin.Context) {
+	// 1. Получаем ID пользователя из контекста (из middleware)
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, DeleteTrackResponse{
+			Error: "User not authenticated",
+		})
+		return
+	}
+
+	// 2. Получаем ID трека из URL параметра
+	trackIDStr := c.Param("id")
+	var trackID uint
+	if _, err := fmt.Sscanf(trackIDStr, "%d", &trackID); err != nil {
+		c.JSON(http.StatusBadRequest, DeleteTrackResponse{
+			Error: "Invalid track ID",
+		})
+		return
+	}
+
+	// 3. Находим трек (проверяем, что он принадлежит этому пользователю)
+	var track model.Track
+	if err := h.DB.Where("id = ? AND user_id = ?", trackID, userID).First(&track).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, DeleteTrackResponse{
+				Error: "Track not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, DeleteTrackResponse{
+			Error: "Database error",
+		})
+		return
+	}
+
+	// 4. Удаляем файл с диска
+	if err := os.Remove(track.FilePath); err != nil {
+		// Логируем ошибку, но не прерываем удаление из БД
+		// log.Printf("Failed to delete file %s: %v", track.FilePath, err)
+	}
+
+	// 5. Удаляем запись из базы данных
+	if err := h.DB.Delete(&track).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, DeleteTrackResponse{
+			Error: "Failed to delete track",
+		})
+		return
+	}
+
+	// 6. Успешный ответ
+	c.JSON(http.StatusOK, DeleteTrackResponse{
+		Message: "Track deleted successfully",
 	})
 }

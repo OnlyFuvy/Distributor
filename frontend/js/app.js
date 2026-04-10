@@ -1,10 +1,11 @@
 // ===== Глобальные переменные =====
 let authToken = localStorage.getItem('authToken') || null;
 let currentUser = localStorage.getItem('currentUser') || null;
-let allTracks = []; // Все треки пользователя
-let currentTrackIndex = -1; // Индекс текущего трека
-let audioElement = null; // HTML5 Audio элемент
-let isPlaying = false; // Состояние воспроизведения
+let pendingEmail = null; // Email, ожидающий подтверждения
+let allTracks = [];
+let currentTrackIndex = -1;
+let audioElement = null;
+let isPlaying = false;
 
 // ===== Инициализация при загрузке страницы =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,21 +18,14 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupAudioPlayer() {
     audioElement = document.getElementById('audioElement');
     
-    // Обновление прогресс бара
     audioElement.addEventListener('timeupdate', updateProgress);
-    
-    // Когда трек заканчивается — включаем следующий
     audioElement.addEventListener('ended', () => {
         playNextTrack();
     });
-    
-    // Обработка ошибок
     audioElement.addEventListener('error', (e) => {
         console.error('Audio error:', e);
         showPlayerStatus('❌ Ошибка воспроизведения', 'error');
     });
-    
-    // Когда метаданные загружены — обновляем время
     audioElement.addEventListener('loadedmetadata', () => {
         updatePlayerTime();
         document.getElementById('progressBar').max = Math.floor(audioElement.duration);
@@ -51,6 +45,7 @@ function checkAuth() {
 function showLoginForm() {
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('verificationForm').style.display = 'none';
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('userInfo').style.display = 'none';
     document.getElementById('audioPlayer').style.display = 'none';
@@ -59,20 +54,34 @@ function showLoginForm() {
 function showRegisterForm() {
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'block';
+    document.getElementById('verificationForm').style.display = 'none';
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('userInfo').style.display = 'none';
     document.getElementById('audioPlayer').style.display = 'none';
 }
 
+// 🔥 Показ формы верификации 🔥
+function showVerificationForm(email) {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('verificationForm').style.display = 'block';
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('userInfo').style.display = 'none';
+    document.getElementById('audioPlayer').style.display = 'none';
+    
+    document.getElementById('verificationEmail').textContent = email;
+    pendingEmail = email;
+}
+
 function showDashboard() {
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('verificationForm').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
     document.getElementById('userInfo').style.display = 'flex';
     document.getElementById('username').textContent = currentUser;
     document.getElementById('audioPlayer').style.display = 'block';
     
-    // Загружаем список треков
     loadTracks();
 }
 
@@ -95,10 +104,34 @@ function setupEventListeners() {
         await handleLogin();
     });
     
-    // Форма регистрации
+    // 🔥 Форма регистрации 🔥
     document.getElementById('registerFormEl').addEventListener('submit', async (e) => {
         e.preventDefault();
         await handleRegister();
+    });
+    
+    // 🔥 Форма верификации 🔥
+    document.getElementById('verificationFormEl').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = document.getElementById('verificationCode').value;
+        if (pendingEmail && code.length === 6) {
+            await verifyCode(pendingEmail, code);
+        }
+    });
+    
+    // Отправить код повторно
+    document.getElementById('resendCode').addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (pendingEmail) {
+            await sendVerificationCode(pendingEmail);
+        }
+    });
+    
+    // Вернуться ко входу
+    document.getElementById('backToLogin').addEventListener('click', (e) => {
+        e.preventDefault();
+        pendingEmail = null;
+        showLoginForm();
     });
     
     // Форма загрузки трека
@@ -110,7 +143,7 @@ function setupEventListeners() {
     // Кнопка выхода
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
     
-    // 🔊 Контролы плеера
+    // Контролы плеера
     document.getElementById('playBtn').addEventListener('click', togglePlayPause);
     document.getElementById('prevBtn').addEventListener('click', playPrevTrack);
     document.getElementById('nextBtn').addEventListener('click', playNextTrack);
@@ -126,9 +159,7 @@ async function handleLogin() {
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
         });
         
@@ -141,15 +172,15 @@ async function handleLogin() {
             localStorage.setItem('currentUser', currentUser);
             showDashboard();
         } else {
-            alert(data.error || 'Ошибка входа');
+            alert('❌ ' + (data.error || 'Ошибка входа'));
         }
     } catch (error) {
-        alert('Ошибка подключения к серверу');
+        alert('❌ Ошибка подключения к серверу');
         console.error(error);
     }
 }
 
-// ===== Регистрация =====
+// ===== 🔥 Регистрация 🔥 =====
 async function handleRegister() {
     const email = document.getElementById('regEmail').value;
     const username = document.getElementById('regUsername').value;
@@ -158,22 +189,80 @@ async function handleRegister() {
     try {
         const response = await fetch('/api/register', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, username, password }),
         });
         
         const data = await response.json();
         
         if (response.ok) {
-            alert('Регистрация успешна! Теперь войдите.');
+            // ✅ Успех — показываем форму верификации
+            alert('✅ ' + (data.message || 'Регистрация успешна! Проверьте почту.'));
+            
+            // 🔥 Показываем форму ввода кода 🔥
+            showVerificationForm(email);
+            
+            // 🔥 Автоматически отправляем код на почту 🔥
+            await sendVerificationCode(email);
+        } else if (response.status === 409) {
+            alert('⚠️ Пользователь с таким email или именем уже существует.');
             showLoginForm();
         } else {
-            alert(data.error || 'Ошибка регистрации');
+            alert('❌ ' + (data.error || 'Ошибка регистрации'));
         }
     } catch (error) {
-        alert('Ошибка подключения к серверу');
+        alert('❌ Ошибка подключения к серверу');
+        console.error(error);
+    }
+}
+
+// ===== Отправка кода верификации =====
+async function sendVerificationCode(email) {
+    try {
+        const response = await fetch('/api/verify/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log('✅ Код отправлен на ' + email);
+        } else {
+            console.log('⚠️ ' + (data.error || 'Ошибка отправки кода'));
+        }
+    } catch (error) {
+        console.error('Ошибка отправки кода:', error);
+    }
+}
+
+// ===== Подтверждение кода верификации =====
+async function verifyCode(email, code) {
+    try {
+        const response = await fetch('/api/verify/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, code }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Сохраняем токен и входим
+            authToken = data.token;
+            currentUser = email;
+            localStorage.setItem('authToken', authToken);
+            localStorage.setItem('currentUser', currentUser);
+            
+            pendingEmail = null;
+            alert('✅ Email подтверждён! Добро пожаловать!');
+            showDashboard();
+        } else {
+            alert('❌ ' + (data.error || 'Неверный или истёкший код'));
+        }
+    } catch (error) {
+        alert('❌ Ошибка подключения к серверу');
         console.error(error);
     }
 }
@@ -208,9 +297,7 @@ async function handleUpload() {
         
         const response = await fetch('/api/tracks/upload', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-            },
+            headers: { 'Authorization': `Bearer ${authToken}` },
             body: formData,
         });
         
@@ -220,7 +307,7 @@ async function handleUpload() {
             statusDiv.textContent = '✅ Трек загружен успешно!';
             statusDiv.className = 'status success';
             fileInput.value = '';
-            loadTracks(); // Обновляем список треков
+            loadTracks();
         } else {
             statusDiv.textContent = `❌ ${data.error}`;
             statusDiv.className = 'status error';
@@ -240,9 +327,7 @@ async function loadTracks() {
     try {
         const response = await fetch('/api/tracks', {
             method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-            },
+            headers: { 'Authorization': `Bearer ${authToken}` },
         });
         
         const data = await response.json();
@@ -269,8 +354,8 @@ function createTrackElement(track, index) {
     const div = document.createElement('div');
     div.className = 'track-item';
     div.dataset.trackIndex = index;
+    div.dataset.trackId = track.id;
     
-    // Форматируем длительность
     const duration = track.duration ? formatTime(track.duration) : 'N/A';
     
     div.innerHTML = `
@@ -283,22 +368,27 @@ function createTrackElement(track, index) {
         </div>
         <div class="track-actions">
             <button class="btn-play-track" data-track-index="${index}">▶ Воспроизвести</button>
+            <button class="btn-delete-track" data-track-id="${track.id}">🗑️ Удалить</button>
         </div>
     `;
     
-    // Добавляем обработчик клика на кнопку воспроизведения
     const playBtn = div.querySelector('.btn-play-track');
     playBtn.addEventListener('click', () => {
         playTrack(index);
     });
     
-    // Добавляем обработчик клика на waveform
+    const deleteBtn = div.querySelector('.btn-delete-track');
+    deleteBtn.addEventListener('click', async () => {
+        const confirmed = confirm(`Удалить трек "${track.title}"?`);
+        if (!confirmed) return;
+        await deleteTrack(track.id, div);
+    });
+    
     const waveformContainer = div.querySelector('.waveform-container');
     waveformContainer.addEventListener('click', () => {
         playTrack(index);
     });
     
-    // Рисуем волну после добавления в DOM
     setTimeout(() => {
         const canvas = div.querySelector('.waveform-canvas');
         drawWaveform(canvas);
@@ -307,7 +397,7 @@ function createTrackElement(track, index) {
     return div;
 }
 
-// ===== 🔊 ВОСПРОИЗВЕДЕНИЕ ТРЕКА 🔊 =====
+// ===== Воспроизведение трека =====
 function playTrack(index) {
     if (index < 0 || index >= allTracks.length) {
         console.error('Invalid track index:', index);
@@ -317,14 +407,9 @@ function playTrack(index) {
     const track = allTracks[index];
     currentTrackIndex = index;
     
-    // Обновляем название в плеере
     document.getElementById('playerTitle').textContent = track.title;
-    
-    // Устанавливаем источник аудио (путь к файлу на сервере)
-    // Важно: нужно настроить раздачу файлов из папки uploads в Go
     audioElement.src = '/' + track.file_path.replace(/\\/g, '/');
     
-    // Загружаем и воспроизводим
     audioElement.load();
     audioElement.play()
         .then(() => {
@@ -358,49 +443,35 @@ function togglePlayPause() {
     updatePlayPauseButton();
 }
 
-// ===== Обновление кнопки Play/Pause =====
 function updatePlayPauseButton() {
     const playBtn = document.getElementById('playBtn');
     playBtn.textContent = isPlaying ? '⏸' : '▶';
     playBtn.title = isPlaying ? 'Пауза' : 'Воспроизвести';
 }
 
-// ===== Предыдущий трек =====
 function playPrevTrack() {
     if (allTracks.length === 0) return;
-    
     let newIndex = currentTrackIndex - 1;
-    if (newIndex < 0) {
-        newIndex = allTracks.length - 1; // Зацикливаем
-    }
-    
+    if (newIndex < 0) newIndex = allTracks.length - 1;
     playTrack(newIndex);
 }
 
-// ===== Следующий трек =====
 function playNextTrack() {
     if (allTracks.length === 0) return;
-    
     let newIndex = currentTrackIndex + 1;
-    if (newIndex >= allTracks.length) {
-        newIndex = 0; // Зацикливаем
-    }
-    
+    if (newIndex >= allTracks.length) newIndex = 0;
     playTrack(newIndex);
 }
 
-// ===== Перемотка =====
 function seekAudio(e) {
     const progressBar = e.target;
     const newTime = parseInt(progressBar.value);
-    
     if (!isNaN(newTime) && audioElement.duration) {
         audioElement.currentTime = newTime;
         updatePlayerTime();
     }
 }
 
-// ===== Обновление прогресс бара =====
 function updateProgress() {
     const progressBar = document.getElementById('progressBar');
     if (audioElement.duration) {
@@ -409,31 +480,25 @@ function updateProgress() {
     }
 }
 
-// ===== Обновление времени =====
 function updatePlayerTime() {
     const currentTime = audioElement.currentTime || 0;
     const duration = audioElement.duration || 0;
-    
     document.getElementById('playerTime').textContent = 
         `${formatTime(currentTime)} / ${formatTime(duration)}`;
 }
 
-// ===== Форматирование времени =====
 function formatTime(seconds) {
     if (!seconds || isNaN(seconds)) return '0:00';
-    
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// ===== Изменение скорости =====
 function changeSpeed(e) {
     const speed = parseFloat(e.target.value);
     audioElement.playbackRate = speed;
 }
 
-// ===== Остановка воспроизведения =====
 function stopAudio() {
     if (audioElement) {
         audioElement.pause();
@@ -448,54 +513,78 @@ function stopAudio() {
     }
 }
 
-// ===== Статус плеера =====
 function showPlayerStatus(message, type) {
     const title = document.getElementById('playerTitle');
     const originalText = title.textContent;
-    
     title.textContent = message;
     title.style.color = type === 'error' ? '#ff0055' : '#00ff88';
-    
     setTimeout(() => {
         title.textContent = originalText;
         title.style.color = '#fff';
     }, 3000);
 }
 
-// ===== Отрисовка волны =====
 function drawWaveform(canvas) {
     const waveform = JSON.parse(canvas.dataset.waveform || '[]');
-    
-    if (!waveform || waveform.length === 0) {
-        return;
-    }
+    if (!waveform || waveform.length === 0) return;
     
     const ctx = canvas.getContext('2d');
     const width = canvas.offsetWidth;
     const height = canvas.offsetHeight;
     
-    // Устанавливаем размер canvas
     canvas.width = width;
     canvas.height = height;
-    
-    // Очищаем
     ctx.clearRect(0, 0, width, height);
     
-    // Настраиваем стиль
     const gradient = ctx.createLinearGradient(0, 0, width, 0);
     gradient.addColorStop(0, '#00d9ff');
     gradient.addColorStop(1, '#00ff88');
     ctx.fillStyle = gradient;
     
-    // Рисуем волну
     const barWidth = width / waveform.length;
     const centerY = height / 2;
     
     waveform.forEach((value, index) => {
-        const barHeight = value * height * 0.8; // Масштабируем
+        const barHeight = value * height * 0.8;
         const x = index * barWidth;
         const y = centerY - barHeight / 2;
-        
         ctx.fillRect(x, y, barWidth - 1, barHeight);
     });
+}
+
+// ===== Удаление трека =====
+async function deleteTrack(trackId, element) {
+    try {
+        const response = await fetch(`/api/tracks/${trackId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${authToken}` },
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            element.style.opacity = '0';
+            element.style.transform = 'translateX(-20px)';
+            element.style.transition = 'all 0.3s';
+            
+            setTimeout(() => {
+                element.remove();
+                allTracks = allTracks.filter(t => t.id !== trackId);
+                
+                if (currentTrackIndex >= 0 && allTracks[currentTrackIndex]?.id === trackId) {
+                    stopAudio();
+                }
+                
+                const tracksList = document.getElementById('tracksList');
+                if (allTracks.length === 0) {
+                    tracksList.innerHTML = '<p>Треков пока нет</p>';
+                }
+            }, 300);
+        } else {
+            alert(data.error || 'Ошибка при удалении трека');
+        }
+    } catch (error) {
+        alert('Ошибка подключения к серверу');
+        console.error(error);
+    }
 }
