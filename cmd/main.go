@@ -21,7 +21,7 @@ import (
 )
 
 func main() {
-	// 🔥 1. Загрузка .env файла 🔥
+	//  1. Загрузка .env файла 
 	if err := godotenv.Load(); err != nil {
 		log.Println("⚠️  .env file not found, using environment variables")
 	}
@@ -46,7 +46,7 @@ func main() {
 	}
 	log.Println("✅ Database tables created successfully")
 
-	// 5. 🔥 Оптимизация для продакшена 🔥
+	// 5.  Оптимизация для продакшена 
 	if os.Getenv("GIN_MODE") != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -58,7 +58,7 @@ func main() {
 	authHandler := &handler.AuthHandler{DB: db}
 	trackHandler := &handler.TrackHandler{DB: db}
 
-	// 🔥 8. Сервис верификации email 🔥
+	// 8. Сервис верификации email 
 	emailService := &service.EmailService{
 		SMTPHost:     cfg.SMTPHost,
 		SMTPPort:     cfg.SMTPPort,
@@ -72,7 +72,7 @@ func main() {
 		EmailService: emailService,
 	}
 
-	// 🔥 9. Раздача статических файлов 🔥
+	//  9. Раздача статических файлов 
 	r.Static("/css", "frontend/css")
 	r.Static("/js", "frontend/js")
 	r.Static("/uploads", "uploads")
@@ -104,16 +104,16 @@ func main() {
 		protected.DELETE("/tracks/:id", trackHandler.DeleteTrack)
 	}
 
-	// 🔥 13. Настройка HTTP сервера для многопоточности 🔥
+	// 13. Настройка HTTP сервера для многопоточности 
 	srv := &http.Server{
-		Addr:         "0.0.0.0:" + cfg.ServerPort, // 🔥 Слушаем все сетевые интерфейсы
+		Addr:         "0.0.0.0:" + cfg.ServerPort, //  Слушаем все сетевые интерфейсы
 		Handler:      r,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 🔥 14. Запуск сервера в отдельной горутине 🔥
+	//  14. Запуск сервера в отдельной горутине 
 	go func() {
 		log.Printf("🚀 Server starting on %s", srv.Addr)
 		log.Printf("🌐 Frontend available at http://localhost:%s", cfg.ServerPort)
@@ -129,7 +129,7 @@ func main() {
 		}
 	}()
 
-	// 🔥 15. Graceful shutdown (корректное завершение работы) 🔥
+	//  15. Graceful shutdown (корректное завершение работы) 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
