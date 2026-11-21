@@ -77,6 +77,7 @@ func main() {
 	r.Static("/js", "frontend/js")
 	r.Static("/uploads", "uploads")
 	r.StaticFile("/", "frontend/index.html")
+	r.StaticFile("/levels", "frontend/levels/index.html")
 
 	// 10. Публичные маршруты API
 	r.GET("/health", func(c *gin.Context) {

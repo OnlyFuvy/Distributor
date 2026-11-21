@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Distributor · Анализ уровня сигнала</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101722;color:#edf1f5;font:16px/1.55 system-ui,sans-serif}main{max-width:920px;margin:auto;padding:6vh 5vw}header{border-bottom:1px solid #384455;padding-bottom:20px}small{color:#85d5d8}h1{font-size:clamp(32px,6vw,58px);line-height:1.05;margin:12px 0}p{color:#c4ceda}button,select,.pick{font:inherit;border:1px solid #536479;border-radius:7px;padding:8px 12px;background:#222f3f;color:white;cursor:pointer}.pick{background:#8ce0da;color:#102126;font-weight:650}.pick:focus-within{outline:3px solid white}input[type=file]{position:absolute;width:1px;height:1px;opacity:0}.actions,dl{display:flex;gap:12px;align-items:center;flex-wrap:wrap}dl{gap:clamp(12px,6vw,68px)}dt{color:#adbbc9}dd{margin:0;font-size:1.35rem;font-weight:650}section{background:#182330;border:1px solid #354254;padding:clamp(12px,3vw,24px);border-radius:10px}h2{overflow-wrap:anywhere}canvas{width:100%;height:230px;display:block}input[type=range]{width:100%;accent-color:#8ce0da}output{display:block;font-variant-numeric:tabular-nums}#status{color:#ffcb85}.legend{display:flex;gap:18px;font-weight:650}.legend span:first-child{color:#fbbb70}.legend span:last-child{color:#71d6db}
+</style>
+<main><header><small>Distributor / Аудиоанализ</small><h1>Уровень сигнала</h1><p>Сравните пиковый и среднеквадратичный уровни записи по времени. Файл обрабатывается в браузере. До 5 минут и 24 МиБ.</p>
+<div class="actions"><label class="pick">Открыть аудио<input id="file" type="file" accept="audio/*"></label><button id="demo">Демосигнал</button></div><div id="status" role="status"></div></header>
+<h2 id="track"></h2><dl><div><dt>Длительность</dt><dd id="length"></dd></div><div><dt>Максимальный пик</dt><dd id="peak"></dd></div><div><dt>Интервалов</dt><dd id="count"></dd></div></dl>
+<section><div class="actions"><label>Шаг <select id="interval"><option value=".1">0,1 с</option><option value=".5" selected>0,5 с</option><option value="1">1 с</option></select></label><button id="export">Скачать CSV</button></div>
+<p class="legend"><span>Пик, dBFS</span><span>RMS, dBFS</span></p><canvas id="chart" aria-label="Динамика уровней по интервалам"></canvas>
+<label>Интервал записи<input id="cursor" type="range" min="0" step="1" value="0"></label><output id="detail" for="cursor interval"></output></section></main><script>"use strict";
+(() => {
+  // src/analysis.ts
+  function analyze(channels, rate, seconds) {
+    const frames = channels[0]?.length ?? 0;
+    if (!frames || channels.some((channel) => channel.length !== frames) || !Number.isFinite(rate) || rate <= 0 || !Number.isFinite(seconds) || seconds <= 0) {
+      throw new Error("\u041D\u0435\u0434\u043E\u043F\u0443\u0441\u0442\u0438\u043C\u044B\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B \u0430\u0443\u0434\u0438\u043E");
+    }
+    const width = Math.max(1, Math.round(rate * seconds));
+    const rows2 = [];
+    for (let start = 0; start < frames; start += width) {
+      const end = Math.min(frames, start + width);
+      let peak = 0, squares = 0;
+      for (const channel of channels) {
+        for (let i = start; i < end; i++) {
+          const sample = channel[i];
+          peak = Math.max(peak, Math.abs(sample));
+          squares += sample * sample;
+        }
+      }
+      rows2.push({
+        start: start / rate,
+        end: end / rate,
+        peak,
+        rms: Math.sqrt(squares / ((end - start) * channels.length))
+      });
+    }
+    return rows2;
+  }
+  function db(value) {
+    return value > 0 ? (20 * Math.log10(value)).toFixed(2) : "-\u221E";
+  }
+  function csv(rows2) {
+    return ["start_s,end_s,peak_dbfs,rms_dbfs", ...rows2.map(
+      (row) => [row.start.toFixed(4), row.end.toFixed(4), db(row.peak), db(row.rms)].join(",")
+    )].join("\r\n");
+  }
+  function demo(rate = 8e3) {
+    return Float32Array.from({ length: rate * 12 }, (_, i) => {
+      const t = i / rate;
+      const amplitude = t < 3 ? 0.13 : t < 7 ? 0.75 : t < 9 ? 0 : 0.4;
+      return amplitude * Math.sin(2 * Math.PI * 220 * t);
+    });
+  }
+
+  // src/app.ts
+  function element(id) {
+    const item = document.getElementById(id);
+    if (!item) throw new Error("\u041D\u0435\u0442 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430 " + id);
+    return item;
+  }
+  var signal = { channels: [demo()], rate: 8e3, name: "\u0414\u0435\u043C\u043E \xB7 \u0442\u0435\u0441\u0442\u043E\u0432\u044B\u0439 \u0442\u043E\u043D" };
+  var revision = 0;
+  var rows = [];
+  var interval = element("interval");
+  var cursor = element("cursor");
+  var file = element("file");
+  var chart = element("chart");
+  var status = element("status");
+  function draw() {
+    const ctx = chart.getContext("2d");
+    if (!ctx || !rows.length) return;
+    const w = chart.clientWidth, h = chart.clientHeight;
+    const scale = window.devicePixelRatio || 1;
+    chart.width = Math.round(w * scale);
+    chart.height = Math.round(h * scale);
+    ctx.scale(scale, scale);
+    const y = (v) => h - 8 - (h - 22) * (1 + Math.max(-60, Math.min(0, 20 * Math.log10(v))) / 60);
+    const x = (i) => 46 + (w - 54) * i / Math.max(1, rows.length - 1);
+    ctx.font = "11px monospace";
+    for (const tick of [0, -20, -40, -60]) {
+      const pos = y(10 ** (tick / 20));
+      ctx.fillStyle = "#a4afbe";
+      ctx.fillText(String(tick), 4, pos + 3);
+      ctx.fillRect(38, pos, w - 46, 0.5);
+    }
+    for (const [key, color] of [["peak", "#fbbb70"], ["rms", "#71d6db"]]) {
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      rows.forEach((row2, i) => i ? ctx.lineTo(x(i), y(row2[key])) : ctx.moveTo(x(i), y(row2[key])));
+      ctx.stroke();
+    }
+    const index = Number(cursor.value);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(x(index), 5, 1, h - 10);
+    const row = rows[index];
+    element("detail").textContent = row.start.toFixed(2) + "\u2013" + row.end.toFixed(2) + " \u0441 \xB7 \u043F\u0438\u043A " + db(row.peak) + " dBFS \xB7 RMS " + db(row.rms) + " dBFS";
+  }
+  function refresh() {
+    rows = analyze(signal.channels, signal.rate, Number(interval.value));
+    cursor.max = String(rows.length - 1);
+    cursor.value = "0";
+    element("track").textContent = signal.name;
+    element("length").textContent = rows[rows.length - 1].end.toFixed(2) + " \u0441";
+    element("peak").textContent = db(rows.reduce((max, row) => Math.max(max, row.peak), 0)) + " dBFS";
+    element("count").textContent = String(rows.length);
+    draw();
+  }
+  file.onchange = async () => {
+    const selected = file.files?.[0];
+    if (!selected) return;
+    const token = ++revision;
+    file.value = "";
+    if (selected.size > 24 * 1024 * 1024) {
+      status.textContent = "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0444\u0430\u0439\u043B \u0434\u043E 24 \u041C\u0438\u0411.";
+      return;
+    }
+    status.textContent = "\u0414\u0435\u043A\u043E\u0434\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435\u2026";
+    let context;
+    try {
+      context = new AudioContext();
+      const audio = await context.decodeAudioData(await selected.arrayBuffer());
+      if (token !== revision) return;
+      if (audio.duration > 300) throw new Error("\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0437\u0430\u043F\u0438\u0441\u044C \u0434\u043E 5 \u043C\u0438\u043D\u0443\u0442.");
+      signal = {
+        channels: Array.from({ length: audio.numberOfChannels }, (_, i) => audio.getChannelData(i)),
+        rate: audio.sampleRate,
+        name: selected.name
+      };
+      refresh();
+      status.textContent = "";
+    } catch (err) {
+      if (token === revision) status.textContent = err instanceof Error && err.message.includes("5 \u043C\u0438\u043D\u0443\u0442") ? err.message : "\u0411\u0440\u0430\u0443\u0437\u0435\u0440 \u043D\u0435 \u0441\u043C\u043E\u0433 \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u044C \u0444\u0430\u0439\u043B. \u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 WAV \u0438\u043B\u0438 MP3.";
+    } finally {
+      if (context) await context.close();
+    }
+  };
+  element("demo").onclick = () => {
+    revision++;
+    signal = { channels: [demo()], rate: 8e3, name: "\u0414\u0435\u043C\u043E \xB7 \u0442\u0435\u0441\u0442\u043E\u0432\u044B\u0439 \u0442\u043E\u043D" };
+    status.textContent = "";
+    refresh();
+  };
+  interval.onchange = refresh;
+  cursor.oninput = draw;
+  element("export").onclick = () => {
+    const url = URL.createObjectURL(new Blob([csv(rows)], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "levels.csv";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1e3);
+  };
+  window.addEventListener("resize", draw);
+  refresh();
+})();
+</script></html>

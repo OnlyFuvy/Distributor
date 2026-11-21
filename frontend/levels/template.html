@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Distributor · Анализ уровня сигнала</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101722;color:#edf1f5;font:16px/1.55 system-ui,sans-serif}main{max-width:920px;margin:auto;padding:6vh 5vw}header{border-bottom:1px solid #384455;padding-bottom:20px}small{color:#85d5d8}h1{font-size:clamp(32px,6vw,58px);line-height:1.05;margin:12px 0}p{color:#c4ceda}button,select,.pick{font:inherit;border:1px solid #536479;border-radius:7px;padding:8px 12px;background:#222f3f;color:white;cursor:pointer}.pick{background:#8ce0da;color:#102126;font-weight:650}.pick:focus-within{outline:3px solid white}input[type=file]{position:absolute;width:1px;height:1px;opacity:0}.actions,dl{display:flex;gap:12px;align-items:center;flex-wrap:wrap}dl{gap:clamp(12px,6vw,68px)}dt{color:#adbbc9}dd{margin:0;font-size:1.35rem;font-weight:650}section{background:#182330;border:1px solid #354254;padding:clamp(12px,3vw,24px);border-radius:10px}h2{overflow-wrap:anywhere}canvas{width:100%;height:230px;display:block}input[type=range]{width:100%;accent-color:#8ce0da}output{display:block;font-variant-numeric:tabular-nums}#status{color:#ffcb85}.legend{display:flex;gap:18px;font-weight:650}.legend span:first-child{color:#fbbb70}.legend span:last-child{color:#71d6db}
+</style>
+<main><header><small>Distributor / Аудиоанализ</small><h1>Уровень сигнала</h1><p>Сравните пиковый и среднеквадратичный уровни записи по времени. Файл обрабатывается в браузере. До 5 минут и 24 МиБ.</p>
+<div class="actions"><label class="pick">Открыть аудио<input id="file" type="file" accept="audio/*"></label><button id="demo">Демосигнал</button></div><div id="status" role="status"></div></header>
+<h2 id="track"></h2><dl><div><dt>Длительность</dt><dd id="length"></dd></div><div><dt>Максимальный пик</dt><dd id="peak"></dd></div><div><dt>Интервалов</dt><dd id="count"></dd></div></dl>
+<section><div class="actions"><label>Шаг <select id="interval"><option value=".1">0,1 с</option><option value=".5" selected>0,5 с</option><option value="1">1 с</option></select></label><button id="export">Скачать CSV</button></div>
+<p class="legend"><span>Пик, dBFS</span><span>RMS, dBFS</span></p><canvas id="chart" aria-label="Динамика уровней по интервалам"></canvas>
+<label>Интервал записи<input id="cursor" type="range" min="0" step="1" value="0"></label><output id="detail" for="cursor interval"></output></section></main><script>/* BUNDLE */</script></html>

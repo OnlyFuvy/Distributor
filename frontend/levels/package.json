@@ -1,0 +1,22 @@
+{
+  "name": "distributor-levels",
+  "version": "1.0.0",
+  "description": "",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "build": "tsc && node build.mjs"
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "devDependencies": {
+    "esbuild": "^0.25.12",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "private": true
+}
